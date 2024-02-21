@@ -403,7 +403,9 @@ $.entwine('ss', function($) {
         return;
       }
 
-      this.saveTabState();
+      // Clear tab state for current browser URL, and save state for new panel to load
+      this.clearTabState(this._formatTabStateUrl(window.location.href));
+      this.saveTabState(this._formatTabStateUrl(url), true);
 
       data.__forceReferer = forceReferer;
 
@@ -490,8 +492,7 @@ $.entwine('ss', function($) {
       formData.push({ name: 'BackURL', value: document.URL.replace(/\/$/, '') });
 
       // Save tab selections so we can restore them later
-      this.saveTabState();
-
+      this.saveTabState(this._tabStateUrl(), false);
 
       // Standard Pjax behaviour is to replace the submitted form with new content.
       // The returned view isn't always decided upon when the request
@@ -859,11 +860,15 @@ $.entwine('ss', function($) {
     /**
      * Save tab selections in order to reconstruct them later.
      * Requires HTML5 sessionStorage support.
+     * 
+     * Parameters:
+     *  (String) url used for session storage key
+     *  (Boolean) resetTab true force selected tab to first, else current active  
      */
-    saveTabState: function() {
+    saveTabState: function(url, resetTab) {
       if(typeof(window.sessionStorage)=="undefined" || window.sessionStorage === null) return;
 
-      var selectedTabs = [], url = this._tabStateUrl();
+      var selectedTabs = [];
       this.find('.cms-tabset,.ss-tabset').each(function(i, el) {
         var id = $(el).attr('id');
         if(!id) return; // we need a unique reference
@@ -872,7 +877,7 @@ $.entwine('ss', function($) {
         // Allow opt-out via data element or entwine property.
         if($(el).data('ignoreTabState') || $(el).getIgnoreTabState()) return;
 
-        selectedTabs.push({id:id, selected:$(el).tabs('option', 'selected')});
+        selectedTabs.push({id:id, selected:resetTab? 0 : $(el).tabs('option', 'selected')});
       });
 
       if(selectedTabs) {
@@ -974,10 +979,13 @@ $.entwine('ss', function($) {
     },
 
     _tabStateUrl: function() {
-      return window.location.href
-        .replace(/\?.*/, '')
-        .replace(/#.*/, '')
-        .replace($('base').attr('href'), '');
+      return this._formatTabStateUrl(window.location.href);
+    },
+
+    _formatTabStateUrl: function(url) {
+      return url.replace(/\?.*/, '')
+                .replace(/#.*/, '')
+                .replace($('base').attr('href'), '');
     },
 
     showLoginDialog: function() {
